@@ -15,7 +15,8 @@ import { RelativePointer, HTMLMousePointer } from '../util/types';
 
 export const mouseClickAction = createAction<HTMLMousePointer>('mouseClick');
 
-export const mouseClickMiddleware = createListenerMiddleware<RechartsRootState>();
+export const mouseClickMiddleware: ListenerMiddlewareInstance<RechartsRootState> =
+  createListenerMiddleware<RechartsRootState>();
 
 // TODO: there's a bug here when you click the chart the activeIndex resets to zero
 mouseClickMiddleware.startListening({

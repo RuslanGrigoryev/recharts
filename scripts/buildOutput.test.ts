@@ -1,4 +1,6 @@
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { builtinModules } from 'module';
+import ts from 'typescript';
 import { describe, it, expect } from 'vitest';
 import { globSync } from 'glob';
 
@@ -57,6 +59,32 @@ describe('expected folder structure', () => {
   describe('types folder output', () => {
     it('should have expected files and no more', async () => {
       await checkFolderOutput('types/**/*', 'typesFiles');
+    });
+  });
+
+  describe('types folder imports', () => {
+    function getPackageName(specifier: string): string {
+      const parts = specifier.split('/');
+      return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+    }
+
+    it('should only import packages declared in dependencies or peerDependencies', () => {
+      const declared = new Set<string>([
+        ...Object.keys(packageJson.dependencies),
+        ...Object.keys(packageJson.peerDependencies),
+        'recharts',
+      ]);
+      const undeclared = new Set<string>();
+      globSync('types/**/*.d.ts', { platform: 'linux' }).forEach(file => {
+        const info = ts.preProcessFile(readFileSync(file, 'utf8'), true, true);
+        info.importedFiles
+          .map(imported => imported.fileName)
+          .filter(specifier => !specifier.startsWith('.') && !builtinModules.includes(specifier))
+          .map(getPackageName)
+          .filter(name => !declared.has(name))
+          .forEach(name => undeclared.add(`${name} (${file})`));
+      });
+      expect([...undeclared].sort()).toEqual([]);
     });
   });
 
